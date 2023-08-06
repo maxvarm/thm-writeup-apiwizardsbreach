@@ -64,26 +64,184 @@ transfer.sh
 
 ## Further Actions
 1. **Which two system files were infected to achieve cron persistence?**
+
+There are multiple locations to store cron jobs, but given that "rooter2" was run from root, it is either system-wide cron or root one.
+By manually checking cronjob locations you can find a strange job evaluating SYSTEMUPDATE env variable every day at 4:20 AM.
+The content of the variable is a simple bash reverse shell to an unknown public IP, so this is the backdoored cron job.
+The last question is how hackers populate this variable, given that cron jobs do not store user-specific variables, and use only system-wide.
+Again, either grepping for malicious IP in /etc or by reviewing common locations like /etc/environment, you should find the answer:
+```
+/etc/crontab, /etc/environment
+```
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/1dbd6e31-a470-4c4b-a3e1-b2b82ba39e83)
+
 2. **What is the C2 server IP address of the malicious actor?**
+
+The IP is shown in plaintext in a cron job from the previous question and perhaps in other persistence methods used by hackers. The answer is:
+```
+5.230.66.147
+```
+
 3. **What port is backdoored bind bash shell listening at?**
+
+Bind shell, also known as forward shell, is basically a service that listens on some port (usually TCP) and creates a shell session upon connection.
+Something similar to Telnet, you can read more about bind shells [here](https://book.hacktricks.xyz/generic-methodologies-and-resources/shells/linux#forward-shell). The investigation workflow starts with reviewing listening ports, looking for uncommon processes or port numbers.
+Netcat process running as root and listening on 3578 port looks suspicious, and further process tree analysis confirms it
+to be a netcat bind shell, somehow running in background. The answer is:
+```
+3578
+```
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/06f19b4c-0768-4e53-805d-8a2554fee558)
+
 4. **How does the bind shell persist across reboots?**
+
+You should see that bind shell activity started from systemd(1) process, followed by bash, and finally netcat process.
+It is neither a command entered via SSH nor another cronjob since there are no sshd or cron processes in the tree. The next most
+common option would be a systemd service, basically a standard for running applications in the background. The answer is:
+```
+systemd service
+```
+
 5. **What is the absolute path of the malicious service?**
+
+Related to the previous question, you can grep for "nc -l" pattern in all possible systemd locations. It should return a single service,
+cleverly masqueraded as "socket.service". You can confirm that it is configured to run after boot and restart upon netcat termination every 20 seconds.
+The answer is:
+```
+/etc/systemd/system/socket.service
+```
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/48c1cb63-9e5e-46a1-a64c-42cc30a0f920)
+
+
 ## Even More Persistence
-1. **Which firewall rule blocks backdoor access from other IPs?**
+1. **Which port is blocked on victim's firewall??**
+
+Listing iptables rules should give you the answer. Port 3578 is used by hackers as bind shell port, so they made sure to close it for everyone except for their C2 IP. The answer is:
+```
+3578
+```
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/6e02f948-bc38-4b4a-9503-ec431ab80d7f)
+
+
 2. **How do the firewall rules persist across reboots?**
+
+Obviously, the backdoored rules should somehow survive iptables flush or server reboot. Excluding rootkits or binary modifications, you can assume that malicious iptables definitions are stored somewhere in system files used to run commands periodically or by some trigger. Grepping for "iptables" or C2 IP should work.
+Note the additional curl command in a backdoored .bashrc file, with sends an HTTP request to hackers upon root login. This is most likely done to notify the hackers about malicious rules "fix". The answer is:
+```
+/root/.bashrc
+```
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/5a9812c6-31ff-4505-890f-1dea15c30805)
+
+
 3. **How is the backdoored local Linux user named?**
+
+A backdoored user should have a convenient shell like /bin/bash, be created within the attack timeline, and preferably be in a privileged group.
+With this in mind, you can easily search for newly-created accounts or grep for all interactive accounts and exclude trusted ones one by one.
+The backdoored user is:
+```
+support
+```
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/4903f79e-0c26-4ded-90c0-d860761a0d48)
+
+
 4. **Which privileged group was assigned to the user?**
+
+For hackers, a privileged group usually means "a group that grants your root, at least partially". Such groups are: admin, docker, disk, and most notably sudo.
+Sudo group privileges, combined with default /etc/sudoers configuration and a password known only to hackers, give the support account unlimited root access on the server. Running "id <user>" or "groups <user>" gives you the answer:
+```
+sudo
+```
+
 5. **What is the comment on the backdoored SSH key?**
+
+SSH public key authentication can be backdoored by either [modifying a legitimate public key](https://blog.thc.org/infecting-ssh-public-keys-with-backdoors) or by adding a new one. In both cases, the files containing the keys are /root/authorized_keys or /home/*/authorized_keys. Note that hackers created two keys, one
+left in /home/dev/.ssh/authorized_keys during Initial Access without any comments. And the second left in /root/.ssh/authorized_keys with a specific "ntsvc" comment. So the answer is:
+```
+ntsvc
+```
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/0488f063-2f26-4e67-9ec2-cce52f9f8b73)
+
+
 6. **Can you spot and name one more popular persistence method?**
+
+Or maybe not so popular 🙂. At least this is the method I observed multiple times and really enjoyed because of its simplicity and effectiveness against EDR detections. Unfortunately, auditd or other auditing tools are not enabled, and the method is not seen in bash history, indicating "rooter2" malware activity.
+In any case, the method is mentioned in multiple blogs and GitHub repos, for example [this one](https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Methodology%20and%20Resources/Linux%20-%20Persistence.md).
+
+One great way to detect the persistence is to use "find" command with [ctime flag](https://bytexd.com/how-to-use-find-with-atime-ctime-mtime-amin-cmin-mmin) set to attack the timeline. Ctime can not be changed by ordinary means, unlike mtime which is often masked by attacks to hide their traces.
+Of course, you can go step by step manually, reviewing every binary or configuration file. Eventually, you should find that the answer is:
+```
+SUID binary
+```
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/2ea0c916-c585-442c-9093-278bdfacae14)
+
+
 7. **What are the original and the backdoored binaries from question 6?**
+
+While you already know the backdoor name (/bin/clamav), it is not yet known how it is used by hackers. Either by checking backdoor hash on VirusTotal, checking its strings, or even running the binary, you should notice that it is a /bin/bash copy. The exploitation is shown on [GTFOBins](https://bytexd.com/how-to-use-find-with-atime-ctime-mtime-amin-cmin-mmin). The answer is:
+```
+/bin/bash, /bin/clamav
+```
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/be29d754-fd38-458d-a876-e19ad225ea3a)
+
+
 8. **What technique was used to hide the backdoor creation date?**
+
+Run "ls -l /bin/bash /bin/clamav" and see that their creation date is the same. Most users would think that clamav is some sort of a system file, if it was created during OS installation, together with bash binary. However, "ls" command shows mtime which can be overridden by hackers, and it is a common defense
+evasion technique to hide creation date of a backoor. Technique name is:
+```
+Timestomping
+```
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/21a2771f-f64d-4786-ac32-f0c1c2e674c1)
+
 ## Final Target
 1. **Which file did the "rooter2" malware drop containing gathered victim's info?**
+
+Using the same "find" technique you can find the needed dropped file. However, I am sure that you have already found a strange ".dump.json" file in root folder while doing previous tasks. It is a strangely-encoded JSON file that contains base64-encoded values of victim's info. The answer is:
+```
+/root/.dump.json
+```
+
 2. **According to the dropped dump, what is the server’s kernel version?**
+
+Open the dump from the previous question, base64-decode the second "C1" value, and split it by two colons. One of the values is victim's kernel version sent to hackers as a part of system discovery. The answer is:
+```
+5.15.0-78-generic
+```
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/070900ba-50e2-4c62-97e4-985600dab21f)
+
+
 3. **Which active internal IPs were found by the “rooter2” network scan?**
+
+The same way decode "C2" value and see that each string is an open port, scanned by "rooter2". Most likely the malware scanned a small internal subnet and only the most common TCP ports like RDP, SSH, or HTTP. Once of the IPs may be the victim's IP itself, but another one is clearly an online server. The answer is:
+```
+192.168.0.21, 192.168.0.22
+```
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/9d0a9172-7d1e-48bc-89b8-39a53eef861d)
+
 4. **How did the hacker find an exposed HTTP index on another internal IP?**
+
+To answer this question, you should definitely come back to root bash history. After dump reviewal, the hackers decided to perform a more aggressive scan of the internal IP. They utilized netcat to scan TCP ports of 1024-10000 range, and looks like they found something interesting. The answer is:
+```
+nc -zv 192.168.0.22 1024-10000 2>&1 | grep -v failed
+```
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/7183850b-2759-40b1-9f69-958568b675ed)
+
+
 5. **What command was used to exfiltrate CDE database from the internal IP?**
+
+Looking further into bash history, port scan is followed by a communication over 8080 port, ending with discovery and download of cardholder data environment database partial backup file. It is safe to assume that someone left an exposed HTTP index on 8080 port that had different sensitive files exposed, including database backup, perhaps for some QA or debugging purposes. Note that hackers renamed the original file to ".review.csv". The answer is:
+```
+wget 192.168.0.22:8080/cde-backup.csv
+```
+
 6. **What is the most secret and precious string stored in the exfiltrated database?**
+
+Of course it's not about leaked names, emails, and even not about credit cards. It is about a flag! 🙂
+Hope you enjoyed the room and ApiWizards Inc. would harden their web application and internal network
+```
+pwned{v3ry-secur3-cardh0ld3r-data-environm3nt}
+```
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/070d347a-3202-44b2-9ba8-3c13452119f3)
 
 
 
