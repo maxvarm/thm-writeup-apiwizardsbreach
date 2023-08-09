@@ -10,7 +10,7 @@ The second option is simply to check application source code. In any case, the a
 ```
 Python
 ```
-![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/84b853e6-ae54-42b1-b109-ebdf25c9955f)
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/blob/main/images/1.png?raw=true)
 
 
 2. **What VPN did the malicious actor use to perform the web attack?**
@@ -20,7 +20,7 @@ Upon checking the IP on Threat Intelligence services like https://spur.us/contex
 ```
 Proton VPN
 ```
-![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/1f72407c-ce15-4317-b12e-ac516dc97027)
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/blob/main/images/2.png?raw=true)
 
 3. **Which vulnerability was found and exploited in the API service?**
 
@@ -43,7 +43,7 @@ Luckily, bash history is configured to be logged in realtime, so most interactiv
 ```
 /home/dev/apiservice/src/config.py
 ```
-![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/02684759-ac79-4d49-8d8b-f16e0e7c19b3)
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/blob/main/images/3.png?raw=true)
 
 5. **What file did the hacker drop and execute to persist on the server?**
 
@@ -52,7 +52,7 @@ The uploaded file seems to be binary to persist on the servers. Either because o
 ```
 /tmp/rooter2
 ```
-![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/a1c6f612-3d29-4af1-a633-1939b36ecb65)
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/blob/main/images/4.png?raw=true)
 
 6. **Which service was used to host the “rooter2” malware?**
 
@@ -73,7 +73,7 @@ Again, either grepping for malicious IP in /etc or by reviewing common locations
 ```
 /etc/crontab, /etc/environment
 ```
-![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/1dbd6e31-a470-4c4b-a3e1-b2b82ba39e83)
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/blob/main/images/5.png?raw=true)
 
 2. **What is the C2 server IP address of the malicious actor?**
 
@@ -91,7 +91,7 @@ to be a netcat bind shell, somehow running in background. The answer is:
 ```
 3578
 ```
-![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/06f19b4c-0768-4e53-805d-8a2554fee558)
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/blob/main/images/6.png?raw=true)
 
 4. **How does the bind shell persist across reboots?**
 
@@ -110,7 +110,7 @@ The answer is:
 ```
 /etc/systemd/system/socket.service
 ```
-![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/48c1cb63-9e5e-46a1-a64c-42cc30a0f920)
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/blob/main/images/7.png?raw=true)
 
 
 ## Even More Persistence
@@ -120,7 +120,7 @@ Listing iptables rules should give you the answer. Port 3578 is used by hackers 
 ```
 3578
 ```
-![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/6e02f948-bc38-4b4a-9503-ec431ab80d7f)
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/blob/main/images/8.png?raw=true)
 
 
 2. **How do the firewall rules persist across reboots?**
@@ -130,7 +130,7 @@ Note the additional curl command in a backdoored .bashrc file, with sends an HTT
 ```
 /root/.bashrc
 ```
-![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/5a9812c6-31ff-4505-890f-1dea15c30805)
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/blob/main/images/9.png?raw=true)
 
 
 3. **How is the backdoored local Linux user named?**
@@ -141,7 +141,7 @@ The backdoored user is:
 ```
 support
 ```
-![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/4903f79e-0c26-4ded-90c0-d860761a0d48)
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/blob/main/images/10.png?raw=true)
 
 
 4. **Which privileged group was assigned to the user?**
@@ -159,7 +159,7 @@ left in /home/dev/.ssh/authorized_keys during Initial Access without any comment
 ```
 ntsvc
 ```
-![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/0488f063-2f26-4e67-9ec2-cce52f9f8b73)
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/blob/main/images/11.png?raw=true)
 
 
 6. **Can you spot and name one more popular persistence method?**
@@ -172,7 +172,7 @@ Of course, you can go step by step manually, reviewing every binary or configura
 ```
 SUID binary
 ```
-![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/2ea0c916-c585-442c-9093-278bdfacae14)
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/blob/main/images/12.png?raw=true)
 
 
 7. **What are the original and the backdoored binaries from question 6?**
@@ -181,7 +181,7 @@ While you already know the backdoor name (/bin/clamav), it is not yet known how 
 ```
 /bin/bash, /bin/clamav
 ```
-![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/be29d754-fd38-458d-a876-e19ad225ea3a)
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/blob/main/images/13.png?raw=true)
 
 
 8. **What technique was used to hide the backdoor creation date?**
@@ -191,7 +191,7 @@ evasion technique to hide creation date of a backoor. Technique name is:
 ```
 Timestomping
 ```
-![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/21a2771f-f64d-4786-ac32-f0c1c2e674c1)
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/blob/main/images/14.png?raw=true)
 
 ## Final Target
 1. **Which file did the "rooter2" malware drop containing gathered victim's info?**
@@ -207,7 +207,7 @@ Open the dump from the previous question, base64-decode the second "C1" value, a
 ```
 5.15.0-78-generic
 ```
-![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/070900ba-50e2-4c62-97e4-985600dab21f)
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/blob/main/images/15.png?raw=true)
 
 
 3. **Which active internal IPs were found by the “rooter2” network scan?**
@@ -216,7 +216,7 @@ The same way decode "C2" value and see that each string is an open port, scanned
 ```
 192.168.0.21, 192.168.0.22
 ```
-![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/9d0a9172-7d1e-48bc-89b8-39a53eef861d)
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/blob/main/images/16.png?raw=true)
 
 4. **How did the hacker find an exposed HTTP index on another internal IP?**
 
@@ -224,7 +224,7 @@ To answer this question, you should definitely come back to root bash history. A
 ```
 nc -zv 192.168.0.22 1024-10000 2>&1 | grep -v failed
 ```
-![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/7183850b-2759-40b1-9f69-958568b675ed)
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/blob/main/images/17.png?raw=true)
 
 
 5. **What command was used to exfiltrate CDE database from the internal IP?**
@@ -241,8 +241,4 @@ Hope you enjoyed the room and ApiWizards Inc. would harden their web application
 ```
 pwned{v3ry-secur3-cardh0ld3r-data-environm3nt}
 ```
-![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/assets/24703293/070d347a-3202-44b2-9ba8-3c13452119f3)
-
-
-
-
+![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/blob/main/images/18.png?raw=true)
