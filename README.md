@@ -13,12 +13,12 @@ Python
 ![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/blob/main/images/1.png?raw=true)
 
 
-2. **What VPN did the malicious actor use to perform the web attack?**
+2. **What is the IP address that attacked the Web Server?**
 
 From Nginx logs you can see a lot of scanning-like requests from an external IP, which is clearly not something legitimate.
-Upon checking the IP on Threat Intelligence services like https://spur.us/context/149.34.244.142, you should receive the same response:
+Also, upon checking the IP on TI services like https://spur.us/context/149.34.244.142, you spot it is a VPN address:
 ```
-Proton VPN
+149.34.244.142
 ```
 ![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/blob/main/images/2.png?raw=true)
 
@@ -152,7 +152,7 @@ Sudo group privileges, combined with default /etc/sudoers configuration and a pa
 sudo
 ```
 
-5. **What is the comment on the backdoored SSH key?**
+5. **What is the strange word on one of the backdoored SSH keys?**
 
 SSH public key authentication can be backdoored by either [modifying a legitimate public key](https://blog.thc.org/infecting-ssh-public-keys-with-backdoors) or by adding a new one. In both cases, the files containing the keys are /root/authorized_keys or /home/*/authorized_keys. Note that hackers created two keys, one
 left in /home/dev/.ssh/authorized_keys during Initial Access without any comments. And the second left in /root/.ssh/authorized_keys with a specific "ntsvc" comment. So the answer is:
@@ -177,9 +177,9 @@ SUID binary
 
 7. **What are the original and the backdoored binaries from question 6?**
 
-While you already know the backdoor name (/bin/clamav), it is not yet known how it is used by hackers. Either by checking backdoor hash on VirusTotal, checking its strings, or even running the binary, you should notice that it is a /bin/bash copy. The exploitation is shown on [GTFOBins](https://bytexd.com/how-to-use-find-with-atime-ctime-mtime-amin-cmin-mmin). The answer is:
+While you already know the backdoor name (/bin/clamav), it is not yet known how it is used by hackers. Either by checking backdoor hash on VirusTotal, checking its strings, or even running the binary, you should notice that it is a /bin/bash copy. The exploitation is shown on [GTFOBins](https://bytexd.com/how-to-use-find-with-atime-ctime-mtime-amin-cmin-mmin). Note that /bin folder is a link to /usr/bin, so the answer is:
 ```
-/bin/bash, /bin/clamav
+/usr/bin/bash, /usr/bin/clamav
 ```
 ![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/blob/main/images/13.png?raw=true)
 
@@ -194,7 +194,7 @@ Timestomping
 ![image](https://github.com/maxvarm/thm-writeup-apiwizardsbreach/blob/main/images/14.png?raw=true)
 
 ## Final Target
-1. **Which file did the "rooter2" malware drop containing gathered victim's info?**
+1. **What file was dropped which contained gathered victim information?**
 
 Using the same "find" technique you can find the needed dropped file. However, I am sure that you have already found a strange ".dump.json" file in root folder while doing previous tasks. It is a strangely-encoded JSON file that contains base64-encoded values of victim's info. The answer is:
 ```
